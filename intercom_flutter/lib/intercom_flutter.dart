@@ -1,46 +1,60 @@
-library intercom_flutter;
-
 import 'dart:async';
 
-import 'package:intercom_flutter_platform_interface/intercom_flutter_platform_interface.dart';
+import 'package:flutter/services.dart';
 
-/// export the [IntercomVisibility] enum
-export 'package:intercom_flutter_platform_interface/intercom_flutter_platform_interface.dart'
-    show IntercomVisibility;
+enum IntercomVisibility { gone, visible }
 
 class Intercom {
+  static const MethodChannel _channel = const MethodChannel('maido.io/intercom');
+  static const EventChannel _unreadChannel = const EventChannel('maido.io/intercom/unread');
+
   static Future<void> initialize(
     String appId, {
-    String? androidApiKey,
-    String? iosApiKey,
-  }) {
-    return IntercomFlutterPlatform.instance
-        .initialize(appId, androidApiKey: androidApiKey, iosApiKey: iosApiKey);
+    String androidApiKey,
+    String iosApiKey,
+  }) async {
+    await _channel.invokeMethod('initialize', {
+      'appId': appId,
+      'androidApiKey': androidApiKey,
+      'iosApiKey': iosApiKey,
+    });
   }
 
   static Stream<dynamic> getUnreadStream() {
-    return IntercomFlutterPlatform.instance.getUnreadStream();
+    return _unreadChannel.receiveBroadcastStream();
   }
 
   /// This method allows you to set a fixed bottom padding for in app messages and the launcher.
   ///
   /// It is useful if your app has a tab bar or similar UI at the bottom of your window.
   /// [padding] is the size of the bottom padding in points.
-  static Future<void> setBottomPadding(int padding) {
-    return IntercomFlutterPlatform.instance.setBottomPadding(padding);
+  static Future<void> setBottomPadding(int padding) async {
+    await _channel.invokeMethod('setBottomPadding', {'bottomPadding': padding});
   }
 
-  static Future<void> setUserHash(String userHash) {
-    return IntercomFlutterPlatform.instance.setUserHash(userHash);
+  static Future<void> setUserHash(String userHash) async {
+    await _channel.invokeMethod('setUserHash', {'userHash': userHash});
   }
 
-  static Future<void> registerIdentifiedUser({String? userId, String? email}) {
-    return IntercomFlutterPlatform.instance
-        .registerIdentifiedUser(userId: userId, email: email);
+  static Future<void> registerIdentifiedUser({String userId, String email}) {
+    if (userId?.isNotEmpty ?? false) {
+      if (email?.isNotEmpty ?? false) {
+        throw ArgumentError('The parameter `email` must be null if `userId` is provided.');
+      }
+      return _channel.invokeMethod('registerIdentifiedUserWithUserId', {
+        'userId': userId,
+      });
+    } else if (email?.isNotEmpty ?? false) {
+      return _channel.invokeMethod('registerIdentifiedUserWithEmail', {
+        'email': email,
+      });
+    } else {
+      throw ArgumentError('An identification method must be provided as a parameter, either `userId` or `email`.');
+    }
   }
 
-  static Future<void> registerUnidentifiedUser() {
-    return IntercomFlutterPlatform.instance.registerUnidentifiedUser();
+  static Future<void> registerUnidentifiedUser() async {
+    await _channel.invokeMethod('registerUnidentifiedUser');
   }
 
   /// Updates the attributes of the current Intercom user.
@@ -52,107 +66,95 @@ class Intercom {
   /// See also:
   ///  * [Localize Intercom to work with multiple languages](https://www.intercom.com/help/en/articles/180-localize-intercom-to-work-with-multiple-languages)
   static Future<void> updateUser({
-    String? email,
-    String? name,
-    String? phone,
-    String? company,
-    String? companyId,
-    String? userId,
-    int? signedUpAt,
-    String? language,
-    Map<String, dynamic>? customAttributes,
-  }) {
-    return IntercomFlutterPlatform.instance.updateUser(
-      email: email,
-      name: name,
-      phone: phone,
-      company: company,
-      companyId: companyId,
-      userId: userId,
-      signedUpAt: signedUpAt,
-      language: language,
-      customAttributes: customAttributes,
-    );
+    String email,
+    String name,
+    String phone,
+    String company,
+    String companyId,
+    String userId,
+    int signedUpAt,
+    String language,
+    Map<String, dynamic> customAttributes,
+  }) async {
+    await _channel.invokeMethod('updateUser', <String, dynamic>{
+      'email': email,
+      'name': name,
+      'phone': phone,
+      'company': company,
+      'companyId': companyId,
+      'userId': userId,
+      'signedUpAt': signedUpAt,
+      'language': language,
+      'customAttributes': customAttributes,
+    });
   }
 
-  static Future<void> logout() {
-    return IntercomFlutterPlatform.instance.logout();
+  static Future<void> logout() async {
+    await _channel.invokeMethod('logout');
   }
 
-  static Future<void> setLauncherVisibility(IntercomVisibility visibility) {
-    return IntercomFlutterPlatform.instance.setLauncherVisibility(visibility);
+  static Future<void> setLauncherVisibility(IntercomVisibility visibility) async {
+    String visibilityString = visibility == IntercomVisibility.visible ? 'VISIBLE' : 'GONE';
+    await _channel.invokeMethod('setLauncherVisibility', {
+      'visibility': visibilityString,
+    });
   }
 
-  static Future<int> unreadConversationCount() {
-    return IntercomFlutterPlatform.instance.unreadConversationCount();
+  static Future<int> unreadConversationCount() async {
+    final result = await _channel.invokeMethod<int>('unreadConversationCount');
+    return result ?? 0;
   }
 
-  static Future<void> setInAppMessagesVisibility(
-      IntercomVisibility visibility) {
-    return IntercomFlutterPlatform.instance
-        .setInAppMessagesVisibility(visibility);
+  static Future<void> setInAppMessagesVisibility(IntercomVisibility visibility) async {
+    String visibilityString = visibility == IntercomVisibility.visible ? 'VISIBLE' : 'GONE';
+    await _channel.invokeMethod('setInAppMessagesVisibility', {
+      'visibility': visibilityString,
+    });
   }
 
-  static Future<void> displayMessenger() {
-    return IntercomFlutterPlatform.instance.displayMessenger();
+  static Future<void> displayMessenger() async {
+    await _channel.invokeMethod('displayMessenger');
   }
 
-  static Future<void> hideMessenger() {
-    return IntercomFlutterPlatform.instance.hideMessenger();
+  static Future<void> hideMessenger() async {
+    await _channel.invokeMethod('hideMessenger');
   }
 
-  static Future<void> displayHelpCenter() {
-    return IntercomFlutterPlatform.instance.displayHelpCenter();
+  static Future<void> displayHelpCenter() async {
+    await _channel.invokeMethod('displayHelpCenter');
   }
 
-  static Future<void> logEvent(String name, [Map<String, dynamic>? metaData]) {
-    return IntercomFlutterPlatform.instance.logEvent(name, metaData);
+  static Future<void> logEvent(String name, [Map<String, dynamic> metaData]) async {
+    await _channel.invokeMethod('logEvent', {'name': name, 'metaData': metaData});
   }
 
-  /// The [token] to send to the Intercom to receive the notifications.
-  ///
-  /// For the Android, this [token] must be a FCM (Firebase cloud messaging) token.
-  /// For the iOS, this [token] must be a APNS token.
-  static Future<void> sendTokenToIntercom(String token) {
-    return IntercomFlutterPlatform.instance.sendTokenToIntercom(token);
+  static Future<void> sendTokenToIntercom(String token) async {
+    assert(token.isNotEmpty);
+    print("Start sending token to Intercom");
+    await _channel.invokeMethod('sendTokenToIntercom', {'token': token});
   }
 
-  static Future<void> handlePushMessage() {
-    return IntercomFlutterPlatform.instance.handlePushMessage();
+  static Future<void> handlePushMessage() async {
+    await _channel.invokeMethod('handlePushMessage');
   }
 
-  static Future<void> displayMessageComposer(String message) {
-    return IntercomFlutterPlatform.instance.displayMessageComposer(message);
+  static Future<void> displayMessageComposer(String message) async {
+    await _channel.invokeMethod('displayMessageComposer', {'message': message});
   }
 
   static Future<bool> isIntercomPush(Map<String, dynamic> message) async {
-    return IntercomFlutterPlatform.instance.isIntercomPush(message);
+    if (!message.values.every((item) => item is String)) {
+      return false;
+    }
+    final result = await _channel.invokeMethod<bool>('isIntercomPush', {'message': message});
+    return result ?? false;
   }
 
   static Future<void> handlePush(Map<String, dynamic> message) async {
-    return IntercomFlutterPlatform.instance.handlePush(message);
-  }
+    if (!message.values.every((item) => item is String)) {
+      throw new ArgumentError('Intercom push messages can only have string values');
+    }
 
-  /// To display an Article, pass in an [articleId] from your Intercom workspace.
-  ///
-  /// An article must be ‘live’ to be used in this feature.
-  /// If it is in a draft or paused state,
-  /// end-users will see an error if the app tries to open the content.
-  ///
-  /// known issue:
-  /// If the articles feature is not enabled on Intercom account
-  /// then opening the article will crash the app on iOS.
-  /// see https://forum.intercom.com/s/question/0D52G000050ZFNoSAO/intercom-display-article-crash-on-ios
-  static Future<void> displayArticle(String articleId) async {
-    return IntercomFlutterPlatform.instance.displayArticle(articleId);
-  }
-
-  /// To display a Carousel, pass in a [carouselId] from your Intercom workspace.
-  ///
-  /// A carousel must be ‘live’ to be used in this feature.
-  /// If it is in a draft or paused state,
-  /// end-users will see an error if the app tries to open the content.
-  static Future<void> displayCarousel(String carouselId) async {
-    return IntercomFlutterPlatform.instance.displayCarousel(carouselId);
+    return await _channel.invokeMethod<void>('handlePush', {'message': message});
   }
 }

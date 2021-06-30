@@ -207,10 +207,10 @@ void main() {
 
     setUp(() {
       channel.setMockMethodCallHandler((MethodCall methodCall) async {
-        ServicesBinding.instance!.defaultBinaryMessenger.handlePlatformMessage(
+        ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
           channelName,
           const StandardMethodCodec().encodeSuccessEnvelope(value),
-          (ByteData? data) {},
+          (ByteData data) {},
         );
       });
     });
@@ -224,19 +224,19 @@ void main() {
     });
   });
 
-  test('displayArticle', () async {
-    final String testArticleId = "123456";
-    await Intercom.displayArticle(testArticleId);
-    expectMethodCall('displayArticle', arguments: {
-      'articleId': testArticleId,
-    });
-  });
+  // test('displayArticle', () async {
+  //   final String testArticleId = "123456";
+  //   await Intercom.displayArticle(testArticleId);
+  //   expectMethodCall('displayArticle', arguments: {
+  //     'articleId': testArticleId,
+  //   });
+  // });
 
-  test('displayCarousel', () async {
-    final String testCarouselId = "123456";
-    await Intercom.displayCarousel(testCarouselId);
-    expectMethodCall('displayCarousel', arguments: {
-      'carouselId': testCarouselId,
-    });
-  });
+  // test('displayCarousel', () async {
+  //   final String testCarouselId = "123456";
+  //   await Intercom.displayCarousel(testCarouselId);
+  //   expectMethodCall('displayCarousel', arguments: {
+  //     'carouselId': testCarouselId,
+  //   });
+  // });
 }
